@@ -75,8 +75,6 @@ def get_user_tweets(user):
 umich_tweets = get_user_tweets("umich")
 
 
-
-
 ## Task 2 - Creating database and loading data into database
 conn = sqlite3.connect('206_APIsAndDBs.sqlite')
 cur = conn.cursor()
@@ -95,7 +93,9 @@ cur.execute('INSERT INTO Users(user_id, screen_name, num_favs, description) VALU
 for tweet in umich_tweets:
 	mentions = tweet['entities']['user_mentions']
 	for mention in mentions:
-		mentionedtup = (mention['id'], mention['screen_name'], None, None)
+		#retrieve info from mentioned users' timelines
+		mentioned_tweets = api.user_timeline(mention['screen_name'])
+		mentionedtup = (mentioned_tweets[0]['user']['id'], mentioned_tweets[0]['user']['screen_name'], mentioned_tweets[0]['user']['favourites_count'], mentioned_tweets[0]['user']['description'])
 		#INSERT OR IGNORE: inserts if not already in table. if already in, ignores error caused by trying to add user twice
 		cur.execute('INSERT OR IGNORE INTO Users(user_id, screen_name, num_favs, description) VALUES (?,?,?,?)', mentionedtup)
 conn.commit()
@@ -116,17 +116,15 @@ conn.commit()
 ## on a dictionary that represents 1 tweet to see it!
 cur.execute('DROP TABLE IF EXISTS Tweets')
 cur.execute('CREATE TABLE Tweets(tweet_id INTEGER PRIMARY KEY UNIQUE, text TEXT, user_posted INTEGER,  time_posted TIMESTAMP, retweets INTEGER, FOREIGN KEY(user_posted) REFERENCES Users(user_id))')
-
+cur.execute('SELECT Tweets.user_posted, Users.user_id FROM Tweets INNER JOIN Users on Tweets.user_posted = Users.user_id')
 for tweet in umich_tweets:
 	#FIX datetime
-	tup = (tweet['id'],  tweet['text'], tweet['user']['id'], dt.tweet['created_at'], tweet['retweet_count'])
+	tup = (tweet['id'],  tweet['text'], tweet['user']['id'], tweet['created_at'], tweet['retweet_count'])
 	cur.execute('INSERT INTO Tweets(tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)', tup)
 conn.commit()
 
-#tweet['user']['entities']['favourites_count']
 
-
-
+conn.close()
 ## Task 3 - Making queries, saving data, fetching data
 
 # All of the following sub-tasks require writing SQL statements 
@@ -275,4 +273,4 @@ class Task3(unittest.TestCase):
 
 
 if __name__ == "__main__":
-	unittest.main(verbosity=2)
+	unittest.main(verbosity=2, warnings = 'ignore')
