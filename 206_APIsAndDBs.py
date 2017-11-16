@@ -77,25 +77,38 @@ umich_tweets = get_user_tweets("umich")
 
 
 ## Task 2 - Creating database and loading data into database
+conn = sqlite3.connect('206_APIsAndDBs.sqlite')
+cur = conn.cursor()
 ## You should load into the Users table:
 # The umich user, and all of the data about users that are mentioned 
 # in the umich timeline. 
 # NOTE: For example, if the user with the "TedXUM" screen name is 
 # mentioned in the umich timeline, that Twitter user's info should be 
 # in the Users table, etc.
-conn = sqlite3.connect('206_APIsAndDBs.sqlite')
-cur = conn.cursor()
-
-cur.execute('DROP TABLE IF EXISTS Tweets')
-cur.execute('CREATE TABLE Tweets(tweet_id NUMBER PRIMARY KEY, text TEXT, user_posted NUMBER, time_posted TIMESTAMP, retweets NUMBER)')
 cur.execute('DROP TABLE IF EXISTS Users')
-cur.execute('CREATE TABLE Users(user_id NUMBER PRIMARY KEY, screen_name TEXT, num_favs NUMBER, description TEXT)')
+cur.execute('CREATE TABLE Users(user_id INTEGER PRIMARY KEY, screen_name TEXT, num_favs INTEGER, description TEXT)')
+#insert statement to add info for umich user
+usertup = (umich_tweets[0]['user']['id'], umich_tweets[0]['user']['screen_name'], umich_tweets[0]['user']['favourites_count'], umich_tweets[0]['user']['description'])
+cur.execute('INSERT INTO Users(user_id, screen_name, num_favs, description) VALUES (?,?,?,?)', usertup)
+#for tweet in umich_tweets:
+	#mentions = tweet['entities']['user_mentions']
+	#for mention in mentions:
+		#print(mention)
+#create tables tweets and users
 
 ## You should load into the Tweets table: 
 # Info about all the tweets (at least 20) that you gather from the 
 # umich timeline.
 # NOTE: Be careful that you have the correct user ID reference in 
 # the user_id column! See below hints.
+cur.execute('DROP TABLE IF EXISTS Tweets')
+cur.execute('CREATE TABLE Tweets(tweet_id INTEGER PRIMARY KEY, text TEXT, user_posted INTEGER, time_posted TIMESTAMP, retweets INTEGER)')
+
+for tweet in umich_tweets:
+	tup = (tweet['id'],  tweet['text'], tweet['user']['screen_name'], tweet['created_at'], tweet['retweet_count'])
+	cur.execute('INSERT INTO Tweets(tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)', tup)
+conn.commit()
+
 
 ## HINT: There's a Tweepy method to get user info, so when you have a 
 ## user id or screenname you can find alllll the info you want about 
@@ -105,11 +118,11 @@ cur.execute('CREATE TABLE Users(user_id NUMBER PRIMARY KEY, screen_name TEXT, nu
 ## dictionary -- you don't need to do any manipulation of the Tweet 
 ## text to find out which they are! Do some nested data investigation 
 ## on a dictionary that represents 1 tweet to see it!
-for tweet in umich_tweets:
-	tup = tweet['id'],  tweet['text'], tweet['user']['screen_name'], tweet['created_at'], tweet['retweet_count']
-	cur.execute('INSERT INTO Tweets(tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)', tup)
-conn.commit()
+
 #tweet['user']['entities']['favourites_count']
+
+
+
 ## Task 3 - Making queries, saving data, fetching data
 
 # All of the following sub-tasks require writing SQL statements 
