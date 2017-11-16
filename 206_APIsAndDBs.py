@@ -17,6 +17,7 @@ import tweepy
 import twitter_info # same deal as always...
 import json
 import sqlite3
+from datetime import datetime as dt
 
 ## Your name: Hannah Thoms
 ## The names of anyone you worked with on this project:
@@ -86,29 +87,24 @@ cur = conn.cursor()
 # mentioned in the umich timeline, that Twitter user's info should be 
 # in the Users table, etc.
 cur.execute('DROP TABLE IF EXISTS Users')
-cur.execute('CREATE TABLE Users(user_id INTEGER PRIMARY KEY, screen_name TEXT, num_favs INTEGER, description TEXT)')
-#insert statement to add info for umich user
+cur.execute('CREATE TABLE Users(user_id INTEGER PRIMARY KEY UNIQUE, screen_name TEXT, num_favs INTEGER, description TEXT)')
+#add info for umich user to table
 usertup = (umich_tweets[0]['user']['id'], umich_tweets[0]['user']['screen_name'], umich_tweets[0]['user']['favourites_count'], umich_tweets[0]['user']['description'])
 cur.execute('INSERT INTO Users(user_id, screen_name, num_favs, description) VALUES (?,?,?,?)', usertup)
-#for tweet in umich_tweets:
-	#mentions = tweet['entities']['user_mentions']
-	#for mention in mentions:
-		#print(mention)
-#create tables tweets and users
+#loop to add info for mentioned users to table
+for tweet in umich_tweets:
+	mentions = tweet['entities']['user_mentions']
+	for mention in mentions:
+		mentionedtup = (mention['id'], mention['screen_name'], None, None)
+		#INSERT OR IGNORE: inserts if not already in table. if already in, ignores error caused by trying to add user twice
+		cur.execute('INSERT OR IGNORE INTO Users(user_id, screen_name, num_favs, description) VALUES (?,?,?,?)', mentionedtup)
+conn.commit()
 
 ## You should load into the Tweets table: 
 # Info about all the tweets (at least 20) that you gather from the 
 # umich timeline.
 # NOTE: Be careful that you have the correct user ID reference in 
 # the user_id column! See below hints.
-cur.execute('DROP TABLE IF EXISTS Tweets')
-cur.execute('CREATE TABLE Tweets(tweet_id INTEGER PRIMARY KEY, text TEXT, user_posted INTEGER, time_posted TIMESTAMP, retweets INTEGER)')
-
-for tweet in umich_tweets:
-	tup = (tweet['id'],  tweet['text'], tweet['user']['screen_name'], tweet['created_at'], tweet['retweet_count'])
-	cur.execute('INSERT INTO Tweets(tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)', tup)
-conn.commit()
-
 
 ## HINT: There's a Tweepy method to get user info, so when you have a 
 ## user id or screenname you can find alllll the info you want about 
@@ -118,6 +114,14 @@ conn.commit()
 ## dictionary -- you don't need to do any manipulation of the Tweet 
 ## text to find out which they are! Do some nested data investigation 
 ## on a dictionary that represents 1 tweet to see it!
+cur.execute('DROP TABLE IF EXISTS Tweets')
+cur.execute('CREATE TABLE Tweets(tweet_id INTEGER PRIMARY KEY UNIQUE, text TEXT, user_posted INTEGER,  time_posted TIMESTAMP, retweets INTEGER, FOREIGN KEY(user_posted) REFERENCES Users(user_id))')
+
+for tweet in umich_tweets:
+	#FIX datetime
+	tup = (tweet['id'],  tweet['text'], tweet['user']['id'], dt.tweet['created_at'], tweet['retweet_count'])
+	cur.execute('INSERT INTO Tweets(tweet_id, text, user_posted, time_posted, retweets) VALUES (?,?,?,?,?)', tup)
+conn.commit()
 
 #tweet['user']['entities']['favourites_count']
 
