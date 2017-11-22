@@ -51,34 +51,43 @@ api = tweepy.API(auth, parser=tweepy.parsers.JSONParser())
 CACHE_FNAME = "206_APIsAndDBs_cache.json"
 # Put the rest of your caching setup here:
 try:
-	cachef = open(CACHE_FNAME, "r")
-	cachedata = cachef.read()
-	cachef.close()
+	cachehand = open(CACHE_FNAME, "r")
+	cachedata = cachehand.read()
+	cachehand.close()
 	CACHE_DICTION = json.loads(cachedata)
 except:
 	CACHE_DICTION = {}
 
 # Define your function get_user_tweets here:
 def get_user_tweets(user):
+	#first checks to see if user is already in the cache file
 	if user in CACHE_DICTION:
+		#stores data from dictionary for user in list object
 		user_tweets = CACHE_DICTION[user]
+	#adds user to cache file if not there already
 	else:
+		#retrieves twitter data for the user
 		user_tweets = api.user_timeline(user)
+		#saves twitter data for user in dictionary
 		CACHE_DICTION[user] = user_tweets
+		#opens cache file to write to it
 		cachefile = open(CACHE_FNAME, "w")
+		#writes data in the dictionary to the cache file
 		cachefile.write(json.dumps(CACHE_DICTION))
+		#closes cache file after writing
 		cachefile.close()
+	#should return list of data retrieved from the cache or pulled from twitter
 	return user_tweets
 
 # Write an invocation to the function for the "umich" user timeline and 
 # save the result in a variable called umich_tweets:
 umich_tweets = get_user_tweets("umich")
 
+### Task 2 - Creating database and loading data into database
 
-## Task 2 - Creating database and loading data into database
 conn = sqlite3.connect('206_APIsAndDBs.sqlite')
 cur = conn.cursor()
-## You should load into the Users table:
+### You should load into the Users table:
 # The umich user, and all of the data about users that are mentioned 
 # in the umich timeline. 
 # NOTE: For example, if the user with the "TedXUM" screen name is 
@@ -91,7 +100,9 @@ usertup = (umich_tweets[0]['user']['id'], umich_tweets[0]['user']['screen_name']
 cur.execute('INSERT INTO Users(user_id, screen_name, num_favs, description) VALUES (?,?,?,?)', usertup)
 #loop to add info for mentioned users to table
 for tweet in umich_tweets:
+	#make object of mentions
 	mentions = tweet['entities']['user_mentions']
+	#iterate through mentions for the tweet
 	for mention in mentions:
 		#retrieve info from mentioned users' timelines
 		mentioned_tweets = api.user_timeline(mention['screen_name'])
@@ -151,6 +162,7 @@ for name in usernames:
 cur.execute('SELECT * FROM Tweets WHERE Tweets.retweets > 10')
 retweets = cur.fetchall()
 
+
 # Make a query to select all the descriptions (descriptions only) of 
 # the users who have favorited more than 500 tweets. Access all those 
 # strings, and save them in a variable called favorites, 
@@ -161,21 +173,21 @@ descs = cur.fetchall()
 for desc in descs:
 	favorites.append(desc[0])
 
-
 # Make a query using an INNER JOIN to get a list of tuples with 2 
 # elements in each tuple: the user screenname and the text of the 
 # tweet. Save the resulting list of tuples in a variable called joined_data2.
-cur.execute('SELECT Users.screen_name, Tweets.text FROM Tweets INNER JOIN Users')
-
+cur.execute('SELECT Users.screen_name, Tweets.text FROM Tweets INNER JOIN Users ON Tweets.user_posted = Users.user_id' )
 joined_data = cur.fetchall()
 
 # Make a query using an INNER JOIN to get a list of tuples with 2 
 # elements in each tuple: the user screenname and the text of the 
 # tweet in descending order based on retweets. Save the resulting 
 # list of tuples in a variable called joined_data2.
+cur.execute('SELECT Users.screen_name, Tweets.text FROM Tweets INNER JOIN Users ON Tweets.user_posted = Users.user_id ORDER BY Tweets.retweets DESC')
+joined_data2 = cur.fetchall()
 
-joined_data2 = True
-
+conn.commit()
+cur.close()
 conn.close()
 
 ### IMPORTANT: MAKE SURE TO CLOSE YOUR DATABASE CONNECTION AT THE END 
